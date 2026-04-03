@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+<title>GST Invoice</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2196f3">
+<style>
+
+body{
+font-family:Arial;
+background:#eee;
+}
+
+@page{
+size:A4;
+margin:10mm;
+}
+
+.invoice{
+width:190mm;
+min-height:260mm;
+margin:auto;
+background:white;
+padding:10mm;
+border:2px solid black;
+box-sizing:border-box;
+}
+
+h2{
+text-align:center;
+margin:0;
+}
+
+.small{
+text-align:center;
+font-size:13px;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+table-layout:fixed;
+}
+
+th,td{
+border:1px solid black;
+padding:5px;
+font-size:13px;
+}
+
+.center{text-align:center;}
+.right{text-align:right;}
+
+input{
+border:none;
+width:100%;
+outline:none;
+}
+
+button{
+padding:6px 10px;
+margin:4px;
+}
+
+.no-print{
+text-align:center;
+margin-top:10px;
+}
+
+@media print{
+
+.no-print{display:none;}
+
+.action-col{display:none;}
+
+.add-btn{display:none;}
+
+body{background:white;}
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="invoice">
+
+<h2>SRI ANGALAMMAN TRADERS</h2>
+
+<div class="small">
+19/1 VOC Nagar 3rd Street<br>
+Tiruppur - 641607
+</div>
+
+<br>
+
+<table>
+
+<tr>
+<td>GSTIN : 33CQUPS2316B1ZW</td>
+<td class="right">PH.NO : 9842026812</td>
+</tr>
+
+<tr>
+
+<td>
+Reverse Charges : No
+</td>
+
+<td>
+Invoice No :
+<span id="inv"></span>
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+State : Tamilnadu<br>
+Code : 33
+</td>
+
+<td>
+Invoice Date :
+<input type="date" id="date">
+</td>
+
+</tr>
+
+</table>
+
+<br>
+
+<table>
+
+<tr>
+
+<th>Bill to Party</th>
+<th>Delivery to Party</th>
+
+</tr>
+
+<tr>
+
+<td>
+Name : <input id="custName" list="customerList" oninput="saveCustomer();loadCustomer(this.value)"><br>
+Address : <input id="custAddr"><br>
+State : <input id="custState">
+</td>
+
+<td>
+Name : <input><br>
+Address : <input><br>
+State : <input>
+</td>
+
+</tr>
+
+</table>
+
+<br>
+
+<table id="items">
+
+<tr>
+
+<th width="5%">Sl</th>
+<th width="30%">Description</th>
+<th width="10%">HSN</th>
+<th width="8%">Qty</th>
+<th width="8%">GST%</th>
+<th width="10%">Rate</th>
+<th width="10%">Gross</th>
+<th width="9%">Tax</th>
+<th width="10%">Total</th>
+<th class="action-col">X</th>
+
+</tr>
+
+</table>
+
+<button class="add-btn" onclick="addRow()">Add Item</button>
+
+<datalist id="productList"></datalist>
+<datalist id="customerList"></datalist>
+
+<br><br>
+
+<table>
+
+<tr>
+
+<td width="50%">
+
+<b>Total in Words</b><br>
+<span id="words"></span>
+
+</td>
+
+<td width="50%">
+
+<table>
+
+<tr>
+<td>Total Gross</td>
+<td id="gross" class="right">0</td>
+</tr>
+
+<tr>
+<td>Total Tax</td>
+<td id="tax" class="right">0</td>
+</tr>
+
+<tr>
+<td><b>Total Invoice</b></td>
+<td id="total" class="right"><b>0</b></td>
+</tr>
+<tr>
+<td>Roundoff</td>
+<td id="roundoff" class="right">0</td>
+</tr>
+
+<tr>
+<td><b>Net Payable</b></td>
+<td id="finalTotal" class="right"><b>0</b></td>
+</tr>
+
+</table>
+
+</td>
+
+</tr>
+
+</table>
+
+<br><br>
+
+<div class="right">
+
+For SRI ANGALAMMAN TRADERS<br><br><br>
+
+Authorised Signatory
+
+</div>
+
+</div>
+
+<div class="no-print">
+
+<button onclick="window.print()">Print / Save PDF</button>
+
+<button onclick="excel()">Export Excel</button>
+
+</div>
+
+<script>
+const shopState = "Tamilnadu";
+// ===== COMPLETE STATIONERY DATABASE =====
+let products = JSON.parse(localStorage.getItem("products")) || [
+
+{name:"Allout",hsn:"3808",gst:18,rate:165},
+{name:"Apsara Pencil",hsn:"9609",gst:18,rate:3},
+{name:"Apsara Pencil Box",hsn:"9609",gst:18,rate:55},
+{name:"Ball Pen Blue",hsn:"9608",gst:18,rate:5},
+{name:"Ball Pen Black",hsn:"9608",gst:18,rate:5},
+{name:"Brown Tape",hsn:"3919",gst:18,rate:25},
+{name:"Chart",hsn:"4823",gst:12,rate:8},
+{name:"Cello Tape 1 Inch",hsn:"3919",gst:18,rate:25},
+{name:"Cello Tape 2 Inch",hsn:"3919",gst:18,rate:50},
+{name:"Calculator",hsn:"8470",gst:18,rate:250},
+{name:"DOMS Hexel Pen",hsn:"9608",gst:18,rate:4},
+{name:"Double Side Tape",hsn:"3919",gst:18,rate:20},
+{name:"Drawing Book",hsn:"4820",gst:12,rate:45},
+{name:"Eraser",hsn:"4016",gst:18,rate:5},
+{name:"Exam Pad",hsn:"4820",gst:12,rate:35},
+{name:"Fevicol 50ml",hsn:"3506",gst:18,rate:20},
+{name:"Fevicol 100ml",hsn:"3506",gst:18,rate:40},
+{name:"File Folder",hsn:"4820",gst:12,rate:25},
+{name:"Geometry Box",hsn:"9017",gst:18,rate:120},
+{name:"Green Pen",hsn:"9608",gst:18,rate:5},
+{name:"Har pic 500ml",hsn:"3402",gst:18,rate:105},
+{name:"Highlighter",hsn:"9608",gst:18,rate:18},
+{name:"Ink Pen",hsn:"9608",gst:18,rate:18},
+{name:"Jumbo Pencil",hsn:"9609",gst:18,rate:8},
+{name:"Knife Cutter",hsn:"8211",gst:18,rate:18},
+{name:"Long Notebook",hsn:"4820",gst:12,rate:70},
+{name:"Lyzol 500ml",hsn:"3401",gst:18,rate:123},
+{name:"Mat",hsn:"9702",gst:5,rate:40},
+{name:"Marker Permanent",hsn:"9608",gst:18,rate:18},
+{name:"Micro 160p Ruled Note",hsn:"4820",gst:12,rate:60.5},
+{name:"Notebook 200 Pages",hsn:"4820",gst:12,rate:85},
+{name:"Napthalene Balls Pocket",hsn:"2902",gst:18,rate:40},
+{name:"Office File",hsn:"4820",gst:12,rate:30},
+{name:"Pen Blue",hsn:"9608",gst:18,rate:5},
+{name:"Phenoyl",hsn:"2907",gst:18,rate:30},
+{name:"Plastic Tray Big",hsn:"3926",gst:18,rate:100},
+{name:"Plastic Box 444",hsn:"3926",gst:18,rate:60},
+{name:"Quick Glue",hsn:"3506",gst:18,rate:15},
+{name:"Register Book",hsn:"4820",gst:12,rate:110},
+{name:"Ruler 30cm",hsn:"9017",gst:18,rate:10},
+{name:"Scale",hsn:"8423",gst:18,rate:10},
+{name:"Scissor Big",hsn:"8213",gst:18,rate:142},
+{name:"Sketch",hsn:"9608",gst:18,rate:35},
+{name:"Small Note",hsn:"4820",gst:12,rate:12},
+{name:"Stapler",hsn:"8472",gst:18,rate:90},
+{name:"Stapler Pin Box",hsn:"7317",gst:18,rate:10},
+{name:"Stamp Pad Big",hsn:"9612",gst:18,rate:80},
+{name:"Steel Morph Big",hsn:"9603",gst:5,rate:255},
+{name:"Normal Morph",hsn:"9603",gst:5,rate:200},
+{name:"Dusting Stick",hsn:"9603",gst:5,rate:120},
+{name:"Broomstick",hsn:"9603",gst:5,rate:125},
+{name:"Wall Clock",hsn:"9105",gst:18,rate:200},
+{name:"Calculator",hsn:"8470",gst:18,rate:199},
+{name:"Duracell AA Battery",hsn:"8506",gst:18,rate:18.5},
+{name:"Eveready AAA Battery",hsn:"8506",gst:18,rate:16},
+{name:"Whitener",hsn:"4608",gst:18,rate:25},
+{name:"Plastic Scale",hsn:"8423",gst:18,rate:12},
+{name:"A4 Folder",hsn:"4820",gst:18,rate:180},
+{name:"Tag File",hsn:"3450",gst:12,rate:22.6},
+{name:"Odonil",hsn:"3808",gst:18,rate:235},
+{name:"Rin 1kg",hsn:"3402",gst:18,rate:103},
+{name:"Mug",hsn:"3924",gst:18,rate:40},
+{name:"Long Plastic Box",hsn:"3926",gst:18,rate:85},
+{name:"Long Plastic Tray",hsn:"3926",gst:18,rate:100},
+{name:"Small Plastic Tray",hsn:"3926",gst:18,rate:65},
+{name:"Water Bottle",hsn:"3923",gst:18,rate:90},
+{name:"Medium Plastic Box",hsn:"3926",gst:18,rate:50},
+{name:"Colour Tape R",hsn:"3919",gst:18,rate:8},
+{name:"Colour Tape P",hsn:"3919",gst:18,rate:8},
+{name:"Colour Tape G",hsn:"3919",gst:18,rate:8},
+{name:"Plant Plastic Box Big",hsn:"3926",gst:18,rate:65},
+{name:"Plant Plastic Box Small",hsn:"3926",gst:18,rate:45},
+{name:"Table Cover Sheet",hsn:"6304",gst:18,rate:150},
+{name:"Dustbin Medium",hsn:"3926",gst:18,rate:280},
+{name:"Duster Board",hsn:"6307",gst:18,rate:55},
+{name:"Table Dustbin Small 130",hsn:"3926",gst:18,rate:130},
+{name:"Table Dustbin Small 110",hsn:"3926",gst:18,rate:110},
+{name:"Colour Chalk Box",hsn:"9609",gst:18,rate:45},
+{name:"Bucket",hsn:"3923",gst:18,rate:150},
+{name:"Tape Dispenser",hsn:"3926",gst:18,rate:50},
+{name:"Torch Light",hsn:"8513",gst:18,rate:130},
+{name:"Towel",hsn:"6304",gst:5,rate:20},
+{name:"Towel Small",hsn:"6304",gst:5,rate:30},
+{name:"U Clip Box",hsn:"8305",gst:18,rate:20},
+{name:"Vaccine Box Sticker",hsn:"4821",gst:18,rate:200},
+{name:"Whiteboard Marker",hsn:"9608",gst:18,rate:22},
+{name:"White Chalk Box",hsn:"2509",gst:5,rate:15},
+{name:"Xerox Paper A4",hsn:"4802",gst:12,rate:280},
+{name:"Brown Sheet Roll",hsn:"4804",gst:12,rate:0},
+{name:"Emergency Light",hsn:"8513",gst:18,rate:0},
+{name:"Rubber Band 500g",hsn:"4016",gst:18,rate:0},
+{name:"Pedal Dustbin Big",hsn:"3926",gst:18,rate:0},
+{name:"Yellow Highlighter",hsn:"9608",gst:18,rate:18}
+];
+
+function loadProducts(){
+  let list = document.getElementById("productList");
+  list.innerHTML = "";
+
+  products.forEach(p=>{
+    let o=document.createElement("option");
+    o.value=p.name;
+    list.appendChild(o);
+  });
+}
+
+loadProducts();
+let inv=localStorage.getItem("inv")||0;
+inv++;
+localStorage.setItem("inv",inv);
+
+document.getElementById("inv").innerText="SAT-"+String(inv).padStart(3,"0");
+
+date.value=new Date().toISOString().split("T")[0];
+
+function addRow(){
+
+let t = document.getElementById("items");
+let r = t.insertRow();
+let i = t.rows.length - 1;
+
+r.innerHTML = `
+<td class="center">${i}</td>
+<td><input list="productList" oninput="productFill(this)"></td>
+<td><input oninput="updateProduct(this)"></td>
+<td><input type="number" value="1" oninput="calc()"></td>
+<td><input type="number" value="18" oninput="updateProduct(this)"></td>
+<td><input type="number" value="0" oninput="updateProduct(this)"></td>
+<td class="right">0</td>
+<td class="right">0</td>
+<td class="right">0</td>
+<td class="action-col"><button onclick="del(this)">X</button></td>
+`;
+
+}
+
+function productFill(el){
+
+let row = el.parentNode.parentNode;
+let name = el.value.trim();
+
+if(!name) return;
+
+let p = products.find(x => x.name.toLowerCase() === name.toLowerCase());
+
+if(p){
+  row.cells[2].children[0].value = p.hsn;
+  row.cells[4].children[0].value = p.gst;
+  row.cells[5].children[0].value = p.rate;
+}
+else{
+  let newProduct = {
+    name: name,
+    hsn: "0000",
+    gst: 18,
+    rate: 0
+  };
+
+  products.push(newProduct);
+  localStorage.setItem("products", JSON.stringify(products));
+
+  loadProducts();
+
+  row.cells[2].children[0].value = newProduct.hsn;
+  row.cells[4].children[0].value = newProduct.gst;
+  row.cells[5].children[0].value = newProduct.rate;
+}
+
+// ⭐ THIS IS NEW PART (IMPORTANT)
+row.cells[2].children[0].oninput = () => saveProduct(row);
+row.cells[4].children[0].oninput = () => saveProduct(row);
+row.cells[5].children[0].oninput = () => saveProduct(row);
+
+calc();
+}
+
+function del(btn){
+
+btn.parentNode.parentNode.remove();
+
+calc();
+
+}
+
+function calc(){
+
+let t=document.getElementById("items");
+
+let gross=0;
+let tax=0;
+
+for(let i=1;i<t.rows.length;i++){
+
+let r=t.rows[i];
+
+let qty=r.cells[3].children[0].value||0;
+let gst=r.cells[4].children[0].value||0;
+let rate=r.cells[5].children[0].value||0;
+
+let g=qty*rate;
+let tx=g*gst/100;
+
+r.cells[6].innerText=g.toFixed(2);
+r.cells[7].innerText=tx.toFixed(2);
+r.cells[8].innerText=(g+tx).toFixed(2);
+
+gross+=g;
+tax+=tx;
+
+}
+
+document.getElementById("gross").innerText=gross.toFixed(2);
+document.getElementById("tax").innerText=tax.toFixed(2);
+
+let total=gross+tax;
+let rounded = Math.round(total);
+let roundoff = rounded - total;
+
+document.getElementById("roundoff").innerText = roundoff.toFixed(2);
+document.getElementById("finalTotal").innerText = rounded.toFixed(2);
+
+document.getElementById("total").innerText=total.toFixed(2);
+document.getElementById("roundoff").innerText =
+  (roundoff > 0 ? "+" : "") + roundoff.toFixed(2);
+
+document.getElementById("words").innerText = convertToWords(rounded);
+
+}
+function convertToWords(amount){
+
+let rupees = Math.floor(amount);
+let paise = Math.round((amount - rupees) * 100);
+
+function numToWords(n){
+const a = ["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten",
+"Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen",
+"Eighteen","Nineteen"];
+
+const b = ["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
+
+if(n < 20) return a[n];
+if(n < 100) return b[Math.floor(n/10)] + " " + a[n%10];
+if(n < 1000) return a[Math.floor(n/100)] + " Hundred " + numToWords(n%100);
+if(n < 100000) return numToWords(Math.floor(n/1000)) + " Thousand " + numToWords(n%1000);
+if(n < 10000000) return numToWords(Math.floor(n/100000)) + " Lakh " + numToWords(n%100000);
+
+return "";
+}
+
+let words = numToWords(rupees) + " Rupees";
+
+if(paise > 0){
+words += " and " + numToWords(paise) + " Paise";
+}
+
+return words + " Only";
+
+}
+
+function excel(){
+
+let table=document.getElementById("items").cloneNode(true);
+
+for(let r of table.rows){
+r.deleteCell(-1);
+}
+
+let html=table.outerHTML;
+
+let url='data:application/vnd.ms-excel,'+encodeURIComponent(html);
+
+let a=document.createElement("a");
+
+a.href=url;
+a.download="invoice.xls";
+a.click();
+
+}
+function saveProduct(row){
+
+let name = row.cells[1].children[0].value.trim();
+if(!name) return;
+
+let hsn = row.cells[2].children[0].value;
+let gst = row.cells[4].children[0].value;
+let rate = row.cells[5].children[0].value;
+
+let index = products.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
+
+if(index !== -1){
+  products[index].hsn = hsn;
+  products[index].gst = gst;
+  products[index].rate = rate;
+}
+else{
+  products.push({name, hsn, gst, rate});
+}
+
+localStorage.setItem("products", JSON.stringify(products));
+
+}
+
+addRow();
+
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js')
+    .then(() => console.log('PWA Ready'));
+}
+</script>
+</body>
+</html>
